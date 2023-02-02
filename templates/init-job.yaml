@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-init-v1
+spec:
+  template:
+    spec:
+      serviceAccountName: {{ .Release.Name }}-patcho
+      containers:
+      - name: work
+        image: bitnami/kubectl:1.24
+        command: ["sh", "-c"]
+        args:
+        - |
+          echo "Create status configMap"
+
+          kubectl create configmap \
+            {{ include "store.name" . }} \
+            --from-literal=status=todo
+      restartPolicy: Never
+  backoffLimit: 0

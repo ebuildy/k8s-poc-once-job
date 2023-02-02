@@ -1,0 +1,5 @@
+apiVersion: v2
+name: key-value-cm
+version: v0.0.1
+description: |
+  Play with ConfigMap as a key value data store.

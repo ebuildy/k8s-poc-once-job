@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-once-v9
+spec:
+  template:
+    spec:
+      serviceAccountName: {{ .Release.Name }}-patcho
+      volumes:
+      - name: bin-share # share kubectl bin from docker image
+        emptyDir: {}
+      initContainers:
+      - name: check
+        image: bitnami/kubectl:1.24
+        command: ["sh", "-c"]
+        args:
+        - |
+          cp $(which kubectl) /usr/share/bin/
+
+          if test "${WORKFLOW_STATUS}" = 'todo'; then
+            echo "status todo, continue"
+          else
+            echo "status ${WORKFLOW_STATUS}, exiting"
+            exit 1
+          fi
+        volumeMounts:
+        - name: bin-share
+          mountPath: /usr/share/bin
+        env:
+        - name: WORKFLOW_STATUS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "store.name" . }}
+              key: status
+      containers:
+      - name: work
+        image: busybox:1.31
+        args:
+        - sh
+        - -c
+        - |
+          echo "doing stuff"
+
+          /usr/share/bin/kubectl patch cm \
+            {{ include "store.name" . }} \
+            --patch \
+            '{"data" : {"status" : "done", "result" : "232 items processed"}}'
+        volumeMounts:
+        - name: bin-share
+          mountPath: /usr/share/bin
+      restartPolicy: Never
+  backoffLimit: 0
